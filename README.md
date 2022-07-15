@@ -1,6 +1,4 @@
 # Input-Convex-Neural-Network
-This input convex neural network is part of a larger machine learning research paper on normalizing flows implemented in the optimal transport problem. 
+This Input Convex Neural Network (ICNN) is part of a machine learning optimization project on normalizing flows in the optimal transport problem that is being undertaken through the 2022 Polymath Jr. REU under the supervision of Dr. Giulio Trigila and Dr. Ricardo Baptista. 
 
-This subproject is being undertaken as part of the 2022 Polymath Jr. REU under the supervision of Dr. Giulio Trigila and Dr. Ricardo Baptista. 
-
-The main collaborators are Kason Ancelin, Noam Gal and Josef Sajonz.
+The main collaborators on the ICNN are Kason Ancelin, Noam Gal and Josef Sajonz.
