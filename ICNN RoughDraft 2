@@ -1,0 +1,81 @@
+# This is a first attempt at writing a program in PyTorch to simulate a ICNN. It is relatively simple, containing biases for all linear layers, using softplus activation for all, and no complicated structure.
+import torch
+from torch import nn, Tensor
+import torch.nn.functional as F
+import numpy as np
+import torch.nn.init as init
+import torch.optim as optim
+
+class ICNN(torch.nn.Module):
+	def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
+		super(ICNN, self).__init__()
+		self.input_size = dim_inputs
+		self.hidden_layers_dim = hidden_layers_dim
+		self.num_hidden_layers = num_hidden_layers
+		self.output_size = output_size
+
+		z_flow = list() # z_flow will become a list of linear layers. Represents the forward linear flow from y to z1 to z2 to ... zk
+		z_flow.append(nn.Linear(input_size, hidden_layers_dim))
+		for i in range(num_hidden_layers - 1):
+			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim)
+			z_flow[-1].weight = max(0, z_flow.weight) # This should initialize the z-flow weights as non-negative
+		z_flow.append(nn.Linear(hidden_layers_dim, output_size)
+		z_flow[-1].weight = max(0, z_flow.weight) # This should initialize the z-flow weights as non-negative
+		self.z_traversal = torch.nn.ModuleList(z_flow)
+
+		
+		y_flow = list() # y_flow will become a list of linear layers. Represents the forward linear connections between y and z2, y and z3, ..., y and zk
+		for _ in range(num_hidden_layers - 1):
+			y_flow.append(nn.Linear(input_size, hidden_layers_dim)
+		y_flow.append(nn.Linear(input_size, output_size))
+		self.y_traversal = torch.nn.ModuleList(y_flow)
+
+		self.activation_function = nn.Softplus() # Softplus is convex and nondecreasing thus satisfies Proposition 1's criteria for network convexity
+
+	def forward(self, x):
+		vector = self.activation(self.z_traversal[0](x)) # vector holds the activation of each neuron at a given step. Will end up as the final output vector of the neural network
+		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): # I don't understand fully the python syntax here
+			vector = self.activation_function(z_flow(vector) + y_flow(x)) # This is simply moving forward
+		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x) # I believe -1 represents the last element in a list in python, that is the only thing which makes sense to me here
+		return self.activation_function(vector) # This may be wrong
+
+# This next section will run the forward and backward passes of the network, this is a rough draft so may have a bug or two
+# icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) # Input these bad boys
+icnn = ICNN(1, 8, 1, 1)
+# Define the data batches 'trainset' here. Here is the architecture: 'trainset' will have batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
+num_of_batches = 2048
+batch_size = 16
+trainset = list()
+#batch = list()
+#for _ in range(num_of_batches):
+	#batch.append(np.random.rand(batch_size) * 2 - 1)
+	#batch.append(batch[0] ** 2)
+	#trainset.append(batch)
+	#batch.clear()
+# The following section generates the data in the form necessary to pass into the training loop
+batch = np.zeros([batch_size,2])
+for _ in range(num_of_batches): 
+	batch = np.zeros([batch_size,2])
+	for i in range(batch_size):
+		batch[i,0] = np.random.rand() * 2 - 1
+		batch[i,1] = batch[i,0] ** 2
+	trainset.append(batch)
+
+mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
+EPOCHS = 3 # Number of times to loop through the data
+optimizer = optim.Adam(net.parameters(), lr=0.001) # Adam optimizer is the best for our purposes
+for epoch in range(EPOCHS):
+	for data in trainset:
+		X = data[:,0]
+		y = data[:,1]
+		output = icnn.forward(X) # Gotta fix the batch input rather than a single input
+		loss = mse_loss(output, y)
+		loss.backward()
+		optimizer.step()
+		for z_flow in z_traversal:
+			z_flow.weight = max(0, z_flow.weight) # This should guarantee the z-flow weights stay non-negative
+
+
+
+# The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, and more challenging implementation of PyTorch's pre-defined functions. Additionlly, the added complexity of the model makes optimization and appropriate alteration of the model much more challenging.
+class PICNN(torch.nn.Module):
