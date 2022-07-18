@@ -77,7 +77,7 @@ for _ in range(num_of_batches):
 		batch[i,1] = batch[i,0] ** 2
 	trainset.append(batch)
 
-mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problem
+mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
 EPOCHS = 3 # Number of times to loop through the data
 optimizer = optim.Adam(icnn.parameters(), lr=0.001) # Adam optimizer is the best for our purposes
 for epoch in range(EPOCHS):
