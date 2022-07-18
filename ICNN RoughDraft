@@ -26,9 +26,11 @@ class ICNN(nn.Module):
 			# ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
 			''' I am having trouble with this line, first I thought it was just missing the [-1], but now I am also getting an error 
             Boolean value of Tensor with more than one value is ambiguous, we may need to come up with something else as discussed previously'''
-			z_flow[-1].weight = max(0, z_flow[-1].weight) 
+            
+			F.relu(z_flow[-1].weight)
+
 		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
-		z_flow[-1].weight = max(0, z_flow[-1].weight)
+		F.relu(z_flow[-1].weight)
 		# nn.ModuleList outputs a list of all the modules in the inputted flow
 		self.z_traversal = nn.ModuleList(z_flow)
 
@@ -99,9 +101,6 @@ for epoch in range(EPOCHS):
 			z_flow.weight = max(0, z_flow.weight) # guarantees that the z-flow weights are non-negative
 
 
-
 '''The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, 
 and more challenging implementation of PyTorch's pre-defined functions. 
 Additionlly, the added complexity of the model makes optimization and appropriate alteration of the model much more challenging.'''
-
-class PICNN(nn.Module):
