@@ -53,13 +53,18 @@ trainset = list()
 	#trainset.append(batch)
 	#batch.clear()
 # The following section generates the data in the form necessary to pass into the training loop
-batch = np.zeros([batch_size,2])
-for _ in range(num_of_batches): 
-	batch = np.zeros([batch_size,2])
-	for i in range(batch_size):
-		batch[i,0] = np.random.rand() * 2 - 1
-		batch[i,1] = batch[i,0] ** 2
-	trainset.append(batch)
+batch = []
+for _ in range(batch_size):
+    n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
+    batch.append([n, n ** 2])
+trainset.append(batch)
+
+for _ in range(num_of_batches - 1):
+    for i in range(batch_size):
+        n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
+        batch[i][0] = n
+        batch[i][1] = n ** 2
+    trainset.append(batch)
 
 mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
 EPOCHS = 3 # Number of times to loop through the data
