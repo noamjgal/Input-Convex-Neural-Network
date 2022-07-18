@@ -24,9 +24,11 @@ class ICNN(nn.Module):
 		for layer in range(num_hidden_layers - 1):
 			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
 			# ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
-			z_flow[-1].weight = max(0, z_flow.weight) 
+			''' I am having trouble with this line, first I thought it was just missing the [-1], but now I am also getting an error 
+            Boolean value of Tensor with more than one value is ambiguous, we may need to come up with something else as discussed previously'''
+			z_flow[-1].weight = max(0, z_flow[-1].weight) 
 		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
-		z_flow[-1].weight = max(0, z_flow.weight)
+		z_flow[-1].weight = max(0, z_flow[-1].weight)
 		# nn.ModuleList outputs a list of all the modules in the inputted flow
 		self.z_traversal = nn.ModuleList(z_flow)
 
