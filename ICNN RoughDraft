@@ -16,19 +16,35 @@ class ICNN(nn.Module):
 		self.hidden_layers_dim = hidden_layers_dim
 		self.num_hidden_layers = num_hidden_layers
 		self.output_size = output_size
-		
+
 		# z_flow is a list of linear layers representing the forward linear flow from y to z1 to z2 to ... zk
 		z_flow = list() 
 		# nn.Linear applies a linear transformation to incoming data: output = input*weight + bias
 		z_flow.append(nn.Linear(input_size, hidden_layers_dim))
-		for layer in range(num_hidden_layers - 1):
-			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
-			# ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
-			''' I am having trouble with this line, first I thought it was just missing the [-1], but now I am also getting an error 
-            Boolean value of Tensor with more than one value is ambiguous, we may need to come up with something else as discussed previously'''
-			z_flow[-1].weight = max(0, z_flow[-1].weight) 
-		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
-		z_flow[-1].weight = max(0, z_flow[-1].weight)
+
+		 # creating all weights in layer and changing negative ones to 0
+		for i in range(num_hidden_layers - 1):
+		    layer = nn.Linear(hidden_layers_dim, hidden_layers_dim)
+		    # ensures that the z-flow weights are non-negative, which is a constraint from Proposition 1 of the ICNN paper
+		    with torch.no_grad(): # idk what this is but it prevents error
+			# search every weight for every neuron in layer
+			for i in range(hidden_layers_dim): # loop through each neuron
+			    for j in range(hidden_layers_dim): # loop through each weight
+				layer.weight[i, j] = max(0, layer.weight[i, j])
+			# print("Layer Weights: " + str(layer.weight))
+		    z_flow.append(layer)
+
+		# zk
+		last_layer = nn.Linear(hidden_layers_dim, output_size)
+		# searching all weights in layer and changing negative ones to 0
+		with torch.no_grad(): # idk what this is but it prevents error
+		    # search every weight for every neuron in layer. But output is generally dim 1 anyway
+		    for i in range(output_size):
+			for j in range(hidden_layers_dim): # loop through each weight
+			    last_layer.weight[i, j] = max(0, last_layer.weight[i, j])
+		    # print("Last Layer Weights: " + str(last_layer.weight))
+		z_flow.append(last_layer)
+		
 		# nn.ModuleList outputs a list of all the modules in the inputted flow
 		self.z_traversal = nn.ModuleList(z_flow)
 
@@ -43,7 +59,7 @@ class ICNN(nn.Module):
 
 	def forward(self, x):
 		# vector holds the activation of each neuron at a given step and serves as the final output vector of the neural network
-		vector = self.activation(self.z_traversal[0](x)) 
+		vector = self.activation_function(self.z_traversal[0](x)) 
 		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
 			vector = self.activation_function(z_flow(vector) + y_flow(x)) 
 		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
