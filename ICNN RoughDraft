@@ -43,7 +43,7 @@ class ICNN(nn.Module):
 
 	def forward(self, x):
 		# vector holds the activation of each neuron at a given step and serves as the final output vector of the neural network
-		vector = self.activation(self.z_traversal[0](x)) 
+		vector = self.activation_function(self.z_traversal[0](x)) 
 		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
 			vector = self.activation_function(z_flow(vector) + y_flow(x)) 
 		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
