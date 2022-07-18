@@ -1,57 +1,73 @@
-# This is a first attempt at writing a program in PyTorch to simulate a ICNN. It is relatively simple, containing biases for all linear layers, using softplus activation for all, and no complicated structure.
+'''Rough Draft of an Input Convex Neural Network (ICNN), built using PyTorch, that has a simple structure, 
+contains biases for all linear layers, and uses a softplus activation function.'''
+
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
-import numpy as np
 import torch.nn.init as init
 import torch.optim as optim
+import numpy as np
 
-class ICNN(torch.nn.Module):
+class ICNN(nn.Module):
+
 	def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
 		super(ICNN, self).__init__()
 		self.input_size = input_size
 		self.hidden_layers_dim = hidden_layers_dim
 		self.num_hidden_layers = num_hidden_layers
 		self.output_size = output_size
-
-		z_flow = list() # z_flow will become a list of linear layers. Represents the forward linear flow from y to z1 to z2 to ... zk
-		z_flow.append(nn.Linear(input_size, hidden_layers_dim))
-		for i in range(num_hidden_layers - 1):
-			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
-			z_flow[-1].weight = max(0, z_flow.weight) # This should initialize the z-flow weights as non-negative
-		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
-		z_flow[-1].weight = max(0, z_flow.weight) # This should initialize the z-flow weights as non-negative
-		self.z_traversal = torch.nn.ModuleList(z_flow)
-
 		
-		y_flow = list() # y_flow will become a list of linear layers. Represents the forward linear connections between y and z2, y and z3, ..., y and zk
-		for _ in range(num_hidden_layers - 1):
+		# z_flow is a list of linear layers representing the forward linear flow from y to z1 to z2 to ... zk
+		z_flow = list() 
+		# nn.Linear applies a linear transformation to incoming data: output = input*weight + bias
+		z_flow.append(nn.Linear(input_size, hidden_layers_dim))
+		for layer in range(num_hidden_layers - 1):
+			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
+			# ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
+			''' I am having trouble with this line, first I thought it was just missing the [-1], but now I am also getting an error 
+            Boolean value of Tensor with more than one value is ambiguous, we may need to come up with something else as discussed previously'''
+			z_flow[-1].weight = max(0, z_flow[-1].weight) 
+		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
+		z_flow[-1].weight = max(0, z_flow[-1].weight)
+		# nn.ModuleList outputs a list of all the modules in the inputted flow
+		self.z_traversal = nn.ModuleList(z_flow)
+
+		# y_flow is a list of linear layers representing the forward linear connections between y and z2, y and z3, ..., y and zk
+		y_flow = list() 
+		for layer in range(num_hidden_layers - 1):
 			y_flow.append(nn.Linear(input_size, hidden_layers_dim))
 		y_flow.append(nn.Linear(input_size, output_size))
-		self.y_traversal = torch.nn.ModuleList(y_flow)
-
-		self.activation_function = nn.Softplus() # Softplus is convex and nondecreasing thus satisfies Proposition 1's criteria for network convexity
+		self.y_traversal = nn.ModuleList(y_flow)
+		# Softplus is convex and nondecreasing thus satisfies Proposition 1's criteria for network convexity
+		self.activation_function = nn.Softplus() 
 
 	def forward(self, x):
-		vector = self.activation(self.z_traversal[0](x)) # vector holds the activation of each neuron at a given step. Will end up as the final output vector of the neural network
-		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): # I don't understand fully the python syntax here
-			vector = self.activation_function(z_flow(vector) + y_flow(x)) # This is simply moving forward
-		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x) # I believe -1 represents the last element in a list in python, that is the only thing which makes sense to me here
-		return self.activation_function(vector) # This may be wrong
+		# vector holds the activation of each neuron at a given step and serves as the final output vector of the neural network
+		vector = self.activation(self.z_traversal[0](x)) 
+		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
+			vector = self.activation_function(z_flow(vector) + y_flow(x)) 
+		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
+		return self.activation_function(vector) 
+		
 
-# This next section will run the forward and backward passes of the network, this is a rough draft so may have a bug or two
-# icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) # Input these bad boys
+'''This next section will run test forward and backward passes of the network
+icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) Input these bad boys'''
+
 icnn = ICNN(1, 8, 1, 1)
-# Define the data batches 'trainset' here. Here is the architecture: 'trainset' will have batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
+
+# Define the data batches 'trainset' here. 'trainset' architecture: batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
 num_of_batches = 2048
 batch_size = 16
 trainset = list()
+
+# not sure whether this commented out code is still necessary
 #batch = list()
 #for _ in range(num_of_batches):
 	#batch.append(np.random.rand(batch_size) * 2 - 1)
 	#batch.append(batch[0] ** 2)
 	#trainset.append(batch)
 	#batch.clear()
+
 # The following section generates the data in the form necessary to pass into the training loop
 batch = np.zeros([batch_size,2])
 for _ in range(num_of_batches): 
@@ -73,9 +89,12 @@ for epoch in range(EPOCHS):
 		loss.backward()
 		optimizer.step()
 		for z_flow in icnn.z_traversal:
-			z_flow.weight = max(0, z_flow.weight) # This should guarantee the z-flow weights stay non-negative
+			z_flow.weight = max(0, z_flow.weight) # guarantees that the z-flow weights are non-negative
 
 
 
-# The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, and more challenging implementation of PyTorch's pre-defined functions. Additionlly, the added complexity of the model makes optimization and appropriate alteration of the model much more challenging.
-class PICNN(torch.nn.Module):
+'''The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, 
+and more challenging implementation of PyTorch's pre-defined functions. 
+Additionlly, the added complexity of the model makes optimization and appropriate alteration of the model much more challenging.'''
+
+class PICNN(nn.Module):
