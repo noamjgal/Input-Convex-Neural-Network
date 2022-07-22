@@ -41,9 +41,6 @@ class ICNN(nn.Module):
 		for layer in range(num_hidden_layers - 1):
 			z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
 			# ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
-			''' I am having trouble with this line, first I thought it was just missing the [-1], but now I am also getting an error 
-            Boolean value of Tensor with more than one value is ambiguous, we may need to come up with something else as discussed previously'''
-            
 			F.relu(z_flow[-1].weight)
 
 
@@ -108,7 +105,9 @@ mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regr
 l1 = nn.L1Loss()
 EPOCHS = 1 # Number of times to loop through the data
 optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the best for our purposes
+epoch_count = 0
 for epoch in range(EPOCHS):
+	epoch_count += 1
 	for data in trainset:
 		X = torch.tensor(np.array([data[:,0]]).T)
 		y = torch.tensor(np.array([data[:,1]]).T)
@@ -118,7 +117,7 @@ for epoch in range(EPOCHS):
 		optimizer.step()
 		for z_flow in icnn.z_traversal:
 			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
-
+	print("The loss for epoch ", epoch_count, "is:", loss.item())
 
 should_test = True
 if should_test:
