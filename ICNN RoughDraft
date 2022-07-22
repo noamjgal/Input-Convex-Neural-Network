@@ -6,7 +6,10 @@ from torch import nn, Tensor
 import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
+
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
 
 '''The MPS device enables high-performance training on GPU for MacOS devices with Metal programming framework.
 It introduces a new device to map Machine Learning computational graphs and primitives on highly efficient
@@ -153,8 +156,7 @@ if should_test:
 	print('\nLoss is:', loss.item())
 
 
-# imports matplotlib and sets style
-import matplotlib.pyplot as plt
+# sets style
 plt.style.use('ggplot')
 
 # there is probably a simpler way to do this, but this converts the X-tensor into a list of floats
@@ -173,7 +175,10 @@ pred_y = [y[0] for y in output.tolist()]
 pred_y.sort()
 plt.plot(plot_X, pred_y, 'red', label = 'predicted line')
 
-# shows the image with legend
+# adds the function and r2 score to the title, and displays
+score = 'r2 score: ' + str(r2_score(true_y, pred_y))
+score
+plt.title('x^2 with ' + score)
 plt.legend()
 plt.show()
 
