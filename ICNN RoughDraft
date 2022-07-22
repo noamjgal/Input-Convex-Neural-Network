@@ -8,7 +8,6 @@ import torch.nn.init as init
 import torch.optim as optim
 import numpy as np
 
-
 '''The MPS device enables high-performance training on GPU for MacOS devices with Metal programming framework.
 It introduces a new device to map Machine Learning computational graphs and primitives on highly efficient
 Metal Performance Shaders Graph framework and tuned kernels provided by Metal Performance Shaders framework respectively.'''
@@ -47,6 +46,7 @@ class ICNN(nn.Module):
             
 			F.relu(z_flow[-1].weight)
 
+
 		z_flow.append(nn.Linear(hidden_layers_dim, output_size))
 		F.relu(z_flow[-1].weight)
 		# nn.ModuleList outputs a list of all the modules in the inputted flow
@@ -67,7 +67,7 @@ class ICNN(nn.Module):
 		for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
 			vector = self.activation_function(z_flow(vector) + y_flow(x)) 
 		vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
-		return self.activation_function(vector) 
+		return self.activation_function(vector)
 		
 
 '''This next section will run test forward and backward passes of the network
@@ -76,7 +76,7 @@ icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) Input
 icnn = ICNN(1, 8, 1, 1)
 
 # Define the data batches 'trainset' here. 'trainset' architecture: batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
-num_of_batches = 2048
+num_of_batches = 2048 * 16
 batch_size = 16
 trainset = list()
 
@@ -90,34 +90,67 @@ trainset = list()
 
 # The following section generates the data in the form necessary to pass into the training loop
 batch = np.empty([batch_size,2])
-for i in range(batch_size):
-    n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
-    batch[i, 0] = n
-    batch[i, 1] = n ** 2
-trainset.append(batch)
+#for i in range(batch_size):
+    #n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
+    #batch[i, 0] = n
+    #batch[i, 1] = n ** 2
+#trainset.append(batch)
 
-for _ in range(num_of_batches - 1):
+for _ in range(num_of_batches):
     # batch = np.zeros([batch_size,2])
     for i in range(batch_size):
-        n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
+        n = np.random.rand() # * 2 - 1 for unifrom  distribution in the interval [-1,1]
         batch[i, 0] = n
         batch[i, 1] = n ** 2
     trainset.append(batch)
 
 mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
-EPOCHS = 3 # Number of times to loop through the data
-optimizer = optim.Adam(icnn.parameters(), lr=0.001) # Adam optimizer is the best for our purposes
+l1 = nn.L1Loss()
+EPOCHS = 1 # Number of times to loop through the data
+optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the best for our purposes
 for epoch in range(EPOCHS):
 	for data in trainset:
-		X = data[:,0]
-		y = data[:,1]
-		output = icnn.forward(X) # Gotta fix the batch input rather than a single input
-		loss = mse_loss(output, y)
+		X = torch.tensor(np.array([data[:,0]]).T)
+		y = torch.tensor(np.array([data[:,1]]).T)
+		output = icnn.forward(X.float()) # Gotta fix the batch input rather than a single input
+		loss = l1(output, y.float())
 		loss.backward()
 		optimizer.step()
 		for z_flow in icnn.z_traversal:
-			z_flow.weight = max(0, z_flow.weight) # guarantees that the z-flow weights are non-negative
+			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
 
+
+should_test = True
+if should_test:
+	# Create testing batch of manual inputs
+	test_values = [1, 0, 0.5]
+	test_batch_size = len(test_values)
+	for i in range(test_batch_size):
+		x = test_values[i]
+		fx = x ** 2
+		test_batch = np.empty([1, 2])
+		test_batch[0, 0] = x
+		test_batch[0, 1] = fx
+		test_X = torch.tensor(np.array([test_batch[:,0]]).T)
+		test_Y = torch.tensor(np.array([test_batch[:,1]]).T)
+		test_output = icnn.forward(test_X.float())
+		test_loss = mse_loss(test_output, test_Y.float())
+		print("Testing: x = " + str(x) + " Expected: y = " + str(fx) + " Actual: y = " + str(test_output.item()))
+		print("Loss: " + str(test_loss.item()))
+
+	# Testing batch of random inputs
+	test = np.zeros([10,2])
+	#random.seed
+	for i in range(10):
+		test[i,0] = np.random.rand()
+		test[i,1] = test[i,0] ** 2
+	print(test)
+	X = torch.tensor(np.array([test[:,0]]).T)
+	y = torch.tensor(np.array([test[:,1]]).T)
+	output = icnn.forward(X.float())
+	print('\n Output is: \n', output)
+	loss = l1(output, y.float())
+	print('\nLoss is:', loss)
 
 '''The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, 
 and more challenging implementation of PyTorch's pre-defined functions. 
