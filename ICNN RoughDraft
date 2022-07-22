@@ -155,9 +155,9 @@ if should_test:
 	loss = l1(output, y.float())
 	print('\nLoss is:', loss.item())
 
-
-# sets style
+# sets style and size
 plt.style.use('ggplot')
+plt.figure(figsize = (10, 10))
 
 # there is probably a simpler way to do this, but this converts the X-tensor into a list of floats
 plot_X = [float(x[0]) for x in X.tolist()]
@@ -165,15 +165,18 @@ plot_X = [float(x[0]) for x in X.tolist()]
 plot_X.sort()
 # creates a list of true y-values corresponding x-values to plot the true line
 true_y = [x*x for x in plot_X]
-# plots the true line
+# plots the true line with true points
 plt.plot(plot_X, true_y, label = 'true line')
+plt.scatter(plot_X, true_y)
 
-# plots the predicted line
+
 pred_y = [y[0] for y in output.tolist()]
 # this part may be problematic, it assumes that the neural network will get all the y-values in the correct order
 # there is probably a better way to do this, but it is working for now
 pred_y.sort()
+# plots the predicted line with predicted points
 plt.plot(plot_X, pred_y, 'red', label = 'predicted line')
+plt.scatter(plot_X, pred_y)
 
 # adds the function and r2 score to the title, and displays
 score = 'r2 score: ' + str(r2_score(true_y, pred_y))
