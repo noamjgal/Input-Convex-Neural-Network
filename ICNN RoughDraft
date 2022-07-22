@@ -24,6 +24,7 @@ if not torch.backends.mps.is_available():
 
 else:
     mps_device = torch.device("mps")
+    print("running on the GPU")
 
 class ICNN(nn.Module):
 
@@ -149,7 +150,32 @@ if should_test:
 	output = icnn.forward(X.float())
 	print('\n Output is: \n', output)
 	loss = l1(output, y.float())
-	print('\nLoss is:', loss)
+	print('\nLoss is:', loss.item())
+
+
+# imports matplotlib and sets style
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
+
+# there is probably a simpler way to do this, but this converts the X-tensor into a list of floats
+plot_X = [float(x[0]) for x in X.tolist()]
+# sorts the X- values, needed for matplotlib to plot it all as one line
+plot_X.sort()
+# creates a list of true y-values corresponding x-values to plot the true line
+true_y = [x*x for x in plot_X]
+# plots the true line
+plt.plot(plot_X, true_y, label = 'true line')
+
+# plots the predicted line
+pred_y = [y[0] for y in output.tolist()]
+# this part may be problematic, it assumes that the neural network will get all the y-values in the correct order
+# there is probably a better way to do this, but it is working for now
+pred_y.sort()
+plt.plot(plot_X, pred_y, 'red', label = 'predicted line')
+
+# shows the image with legend
+plt.legend()
+plt.show()
 
 '''The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, 
 and more challenging implementation of PyTorch's pre-defined functions. 
