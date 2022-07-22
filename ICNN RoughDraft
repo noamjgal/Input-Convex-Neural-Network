@@ -8,6 +8,24 @@ import torch.nn.init as init
 import torch.optim as optim
 import numpy as np
 
+
+'''The MPS device enables high-performance training on GPU for MacOS devices with Metal programming framework.
+It introduces a new device to map Machine Learning computational graphs and primitives on highly efficient
+Metal Performance Shaders Graph framework and tuned kernels provided by Metal Performance Shaders framework respectively.'''
+
+
+# Check that MPS is available, and if available, sets it up, else it prints why MPS is not available.
+if not torch.backends.mps.is_available():
+    if not torch.backends.mps.is_built():
+        print("MPS not available because the current PyTorch install was not "
+              "built with MPS enabled.")
+    else:
+        print("MPS not available because the current MacOS version is not 12.3+ "
+              "and/or you do not have an MPS-enabled device on this machine.")
+
+else:
+    mps_device = torch.device("mps")
+
 class ICNN(nn.Module):
 
 	def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
