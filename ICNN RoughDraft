@@ -104,28 +104,39 @@ for _ in range(num_of_batches):
         batch[i, 0] = n
         batch[i, 1] = n ** 2
     trainset.append(batch)
-
-mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
+    
+# Mean-Squared Error Loss function is preferred for regression problems and L1 loss is preferred for dealing with small values
+mse_loss = nn.MSELoss() 
 l1 = nn.L1Loss()
+
+#Forward pass of the network
 EPOCHS = 2 # Number of times to loop through the data
-count = 0
-total = len(trainset) * EPOCHS
-optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the best for our purposes
+epoch_count = 0
 for epoch in range(EPOCHS):
+	epoch_count += 1
+	# initializes values to be used for visualization    
+	batch_num = 0
+	batch_graph =[]
 	for data in trainset:
 		X = torch.tensor(np.array([data[:,0]]).T)
 		y = torch.tensor(np.array([data[:,1]]).T)
 		output = icnn.forward(X.float()) # Gotta fix the batch input rather than a single input
 		loss = l1(output, y.float())
 		loss.backward()
-		if count % 2000 == 0 or count == total - 1:
-			percent_done = int(100 * count / total)
-			print("Training Loss, " + str(percent_done) + "% " + "done: ", loss.item())
 		optimizer.step()
+		# creates a list of points where the x-value is the batch number and y-value is the loss        
+		batch_num += 1
+		batch_graph.append([batch_num,loss])
 		for z_flow in icnn.z_traversal:
 			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
-		count += 1
-	print("The loss for epoch ", (epoch + 1), "is:", loss.item())
+	print("The loss for epoch ", epoch_count, "is:", loss.item())
+	# plots the loss for each batch in the epoch and displays
+	plt.figure(figsize = (9, 9))
+	batch_plot_X = [(point[0]) for point in batch_graph]
+	batch_plot_Y = [(point[1]) for point in batch_graph]
+	plt.plot(batch_plot_X, batch_plot_Y, label = 'Loss over batches in Training Set')
+	plt.legend()
+	plt.show()
 
 should_test = True
 if should_test:
@@ -165,7 +176,7 @@ plt.style.use('ggplot')
 plt.figure(figsize = (9, 9))
 
 # there is probably a simpler way to do this, but this converts the X-tensor into a list of floats
-plot_X = [float(x[0]) for x in X.tolist()]
+plot_X = [x[0] for x in X.tolist()]
 # sorts the X- values, needed for matplotlib to plot it all as one line
 plot_X.sort()
 # creates a list of true y-values corresponding x-values to plot the true line
