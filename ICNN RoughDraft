@@ -107,26 +107,30 @@ for _ in range(num_of_batches):
 
 mse_loss = nn.MSELoss() # Mean-Squared Error Loss function is preferred for regression problems
 l1 = nn.L1Loss()
-EPOCHS = 1 # Number of times to loop through the data
+EPOCHS = 2 # Number of times to loop through the data
+count = 0
+total = len(trainset) * EPOCHS
 optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the best for our purposes
-epoch_count = 0
 for epoch in range(EPOCHS):
-	epoch_count += 1
 	for data in trainset:
 		X = torch.tensor(np.array([data[:,0]]).T)
 		y = torch.tensor(np.array([data[:,1]]).T)
 		output = icnn.forward(X.float()) # Gotta fix the batch input rather than a single input
 		loss = l1(output, y.float())
 		loss.backward()
+		if count % 2000 == 0 or count == total - 1:
+			percent_done = int(100 * count / total)
+			print("Training Loss, " + str(percent_done) + "% " + "done: ", loss.item())
 		optimizer.step()
 		for z_flow in icnn.z_traversal:
 			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
-	print("The loss for epoch ", epoch_count, "is:", loss.item())
+		count += 1
+	print("The loss for epoch ", (epoch + 1), "is:", loss.item())
 
 should_test = True
 if should_test:
 	# Create testing batch of manual inputs
-	test_values = [1, 0, 0.5]
+	test_values = [1, 0, 0.5, -1, -0.5]
 	test_batch_size = len(test_values)
 	for i in range(test_batch_size):
 		x = test_values[i]
@@ -142,10 +146,11 @@ if should_test:
 		print("Loss: " + str(test_loss.item()))
 
 	# Testing batch of random inputs
-	test = np.zeros([10,2])
+	test_size = 50
+	test = np.zeros([test_size,2])
 	#random.seed
-	for i in range(10):
-		test[i,0] = np.random.rand()
+	for i in range(test_size):
+		test[i,0] = np.random.rand() # * 2 - 1
 		test[i,1] = test[i,0] ** 2
 	print(test)
 	X = torch.tensor(np.array([test[:,0]]).T)
@@ -157,7 +162,7 @@ if should_test:
 
 # sets style and size
 plt.style.use('ggplot')
-plt.figure(figsize = (10, 10))
+plt.figure(figsize = (9, 9))
 
 # there is probably a simpler way to do this, but this converts the X-tensor into a list of floats
 plot_X = [float(x[0]) for x in X.tolist()]
@@ -175,7 +180,7 @@ pred_y = [y[0] for y in output.tolist()]
 # there is probably a better way to do this, but it is working for now
 pred_y.sort()
 # plots the predicted line with predicted points
-plt.plot(plot_X, pred_y, 'red', label = 'predicted line')
+plt.plot(plot_X, pred_y, 'blue', label = 'predicted line')
 plt.scatter(plot_X, pred_y)
 
 # adds the function and r2 score to the title, and displays
