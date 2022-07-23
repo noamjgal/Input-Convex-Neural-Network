@@ -185,7 +185,6 @@ plt.scatter(plot_X, pred_y)
 
 # adds the function and r2 score to the title, and displays
 score = 'r2 score: ' + str(r2_score(true_y, pred_y))
-score
 plt.title('x^2 with ' + score)
 plt.legend()
 plt.show()
