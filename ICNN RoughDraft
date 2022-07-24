@@ -108,6 +108,7 @@ for _ in range(num_of_batches):
 # Mean-Squared Error Loss function is preferred for regression problems and L1 loss is preferred for dealing with small values
 mse_loss = nn.MSELoss() 
 l1 = nn.L1Loss()
+optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the best for our purposes
 
 #Forward pass of the network
 EPOCHS = 2 # Number of times to loop through the data
