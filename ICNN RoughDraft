@@ -112,9 +112,7 @@ optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the bes
 
 #Forward pass of the network
 EPOCHS = 2 # Number of times to loop through the data
-epoch_count = 0
 for epoch in range(EPOCHS):
-	epoch_count += 1
 	# initializes values to be used for visualization    
 	batch_num = 0
 	batch_graph =[]
@@ -130,7 +128,7 @@ for epoch in range(EPOCHS):
 		batch_graph.append([batch_num,loss])
 		for z_flow in icnn.z_traversal:
 			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
-	print("The loss for epoch ", epoch_count, "is:", loss.item())
+	print("The loss for epoch ", (epoch + 1), "is:", loss.item())
 	# plots the loss for each batch in the epoch and displays
 	plt.figure(figsize = (9, 9))
 	batch_plot_X = [(point[0]) for point in batch_graph]
