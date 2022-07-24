@@ -74,7 +74,14 @@ class ICNN(nn.Module):
 '''This next section will run test forward and backward passes of the network
 icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) Input these bad boys'''
 
-icnn = ICNN(1, 8, 1, 1)
+icnn = ICNN(1, 8, 2, 1)
+
+f_dim = 1 # this will ensure our inputted testing and training data is created correctly
+def f(x): # x is a array of floats
+	if len(x) == f_dim: # check if length of x is equal to dimension we set
+		return x[0] ** 2
+
+	return 0
 
 # Define the data batches 'trainset' here. 'trainset' architecture: batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
 num_of_batches = 2048 * 16
@@ -90,7 +97,7 @@ trainset = list()
 	#batch.clear()
 
 # The following section generates the data in the form necessary to pass into the training loop
-batch = np.empty([batch_size,2])
+batch = np.empty([batch_size,f_dim + 1])
 #for i in range(batch_size):
     #n = np.random.rand() * 2 - 1 # * 2 - 1 for normal distribution
     #batch[i, 0] = n
@@ -100,9 +107,14 @@ batch = np.empty([batch_size,2])
 for _ in range(num_of_batches):
     # batch = np.zeros([batch_size,2])
     for i in range(batch_size):
-        n = np.random.rand() # * 2 - 1 for unifrom  distribution in the interval [-1,1]
-        batch[i, 0] = n
-        batch[i, 1] = n ** 2
+         # * 2 - 1 for unifrom  distribution in the interval [-1,1]
+        arr = []
+        for d in range(f_dim):
+            n = np.random.rand()
+            batch[i, d] = n
+            arr.append(n)
+       
+        batch[i, f_dim] = f(arr)
     trainset.append(batch)
     
 # Mean-Squared Error Loss function is preferred for regression problems and L1 loss is preferred for dealing with small values
@@ -112,22 +124,33 @@ optimizer = optim.Adam(icnn.parameters(), lr=0.0001) # Adam optimizer is the bes
 
 #Forward pass of the network
 EPOCHS = 2 # Number of times to loop through the data
+count = 0
+total = len(trainset) * EPOCHS
 for epoch in range(EPOCHS):
 	# initializes values to be used for visualization    
 	batch_num = 0
-	batch_graph =[]
-	for data in trainset:
-		X = torch.tensor(np.array([data[:,0]]).T)
-		y = torch.tensor(np.array([data[:,1]]).T)
+	batch_graph = []
+	for data in trainset: # data is a specific batch
+		X = torch.tensor(np.array([data[:,:f_dim]]).T)
+		# print("X", X)
+		y = torch.tensor(np.array([data[:,f_dim]]).T)
+		# print("Y", y)
 		output = icnn.forward(X.float()) # Gotta fix the batch input rather than a single input
+
 		loss = l1(output, y.float())
 		loss.backward()
+
+		if count % 2000 == 0 or count == total - 1:
+			percent_done = int(100 * count / total)
+			# print("Training Loss, " + str(percent_done) + "% " + "done: ", loss.item())
+
 		optimizer.step()
 		# creates a list of points where the x-value is the batch number and y-value is the loss        
 		batch_num += 1
 		batch_graph.append([batch_num,loss])
 		for z_flow in icnn.z_traversal:
 			F.relu(z_flow.weight) # guarantees that the z-flow weights are non-negative
+		count += 1
 	print("The loss for epoch ", (epoch + 1), "is:", loss.item())
 	# plots the loss for each batch in the epoch and displays
 	plt.figure(figsize = (9, 9))
@@ -140,16 +163,18 @@ for epoch in range(EPOCHS):
 should_test = True
 if should_test:
 	# Create testing batch of manual inputs
-	test_values = [1, 0, 0.5, -1, -0.5]
+	test_values = [[1, 2], [0, 1], [0.5, 0], [-1, 1], [-0.5, 1]]
 	test_batch_size = len(test_values)
 	for i in range(test_batch_size):
 		x = test_values[i]
-		fx = x ** 2
-		test_batch = np.empty([1, 2])
-		test_batch[0, 0] = x
-		test_batch[0, 1] = fx
-		test_X = torch.tensor(np.array([test_batch[:,0]]).T)
-		test_Y = torch.tensor(np.array([test_batch[:,1]]).T)
+		fx = f(x)
+		test_batch = np.empty([1, f_dim + 1])
+		for d in range(f_dim):
+			test_batch[0, d] = x
+		test_batch[0, f_dim] = fx
+		test_X = torch.tensor(np.array([test_batch[0:f_dim - 1]]).T)
+		test_Y = torch.tensor(np.array([test_batch[:,f_dim]]).T)
+		input_tensor = torch.from_numpy(test_X).float()
 		test_output = icnn.forward(test_X.float())
 		test_loss = mse_loss(test_output, test_Y.float())
 		print("Testing: x = " + str(x) + " Expected: y = " + str(fx) + " Actual: y = " + str(test_output.item()))
@@ -157,14 +182,19 @@ if should_test:
 
 	# Testing batch of random inputs
 	test_size = 50
-	test = np.zeros([test_size,2])
+	test = np.zeros([test_size,f_dim + 1])
 	#random.seed
 	for i in range(test_size):
-		test[i,0] = np.random.rand() # * 2 - 1
-		test[i,1] = test[i,0] ** 2
+		arr = []
+		for d in range(f_dim):
+			n = np.random.rand() # * 2 - 1
+			test[i, d] = n
+			arr.append(n)
+		test[i,f_dim] = f(arr)
 	print(test)
-	X = torch.tensor(np.array([test[:,0]]).T)
-	y = torch.tensor(np.array([test[:,1]]).T)
+	X = torch.tensor(np.array([test[0:f_dim - 1]]).T)
+	y = torch.tensor(np.array([test[:,f_dim]]).T)
+	# input_tensor = torch.from_numpy(np.asarray(X.float()))
 	output = icnn.forward(X.float())
 	print('\n Output is: \n', output)
 	loss = l1(output, y.float())
