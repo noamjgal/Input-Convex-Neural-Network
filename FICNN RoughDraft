@@ -29,10 +29,10 @@ else:
     mps_device = torch.device("mps")
     print("running on the GPU")
 
-class ICNN(nn.Module):
+class FICNN(nn.Module):
 
 	def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
-		super(ICNN, self).__init__()
+		super(FICNN, self).__init__()
 		self.input_size = input_size
 		self.hidden_layers_dim = hidden_layers_dim
 		self.num_hidden_layers = num_hidden_layers
@@ -72,9 +72,9 @@ class ICNN(nn.Module):
 		
 
 '''This next section will run test forward and backward passes of the network
-icnn = ICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) Input these bad boys'''
+icnn = FICNN(input_size, hidden_layers_dim, num_hidden_layers, output_size) Input these bad boys'''
 
-icnn = ICNN(1, 8, 1, 1)
+icnn = FICNN(1, 8, 1, 1)
 
 # Define the data batches 'trainset' here. 'trainset' architecture: batch size 16, 2048 batches, and then some dimensionality of each x-value with its corresponding norm(x)^2
 num_of_batches = 2048 * 16
@@ -198,7 +198,3 @@ score = 'r2 score: ' + str(r2_score(true_y, pred_y))
 plt.title('x^2 with ' + score)
 plt.legend()
 plt.show()
-
-'''The next class, PICNN, will be much more complex. It must account for the added architectual complexity of PICNN's, 
-and more challenging implementation of PyTorch's pre-defined functions. 
-Additionlly, the added complexity of the model makes optimization and appropriate alteration of the model much more challenging.'''
