@@ -7,54 +7,55 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
 import numpy as np
+import matplotlib.pyplot as plt 
 
 class ICNN(nn.Module):
 
-  def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
-    super(ICNN, self).__init__()
-    self.input_size = input_size
-    self.hidden_layers_dim = hidden_layers_dim
-    self.num_hidden_layers = num_hidden_layers
-    self.output_size = output_size
-    self.weight_initialization_description = "Insert description of weight initialization here" # need someone to assist here
-		
-    # z_flow is a list of linear layers representing the forward linear flow from y to z1 to z2 to ... zk
-    # nn.Linear applies a linear transformation to incoming data: output = input*weight + bias
-    z_flow = list()
-    z_flow.append(nn.Linear(input_size, hidden_layers_dim))
-    for layer in range(num_hidden_layers - 1):
-      z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
-    z_flow.append(nn.Linear(hidden_layers_dim, output_size))
-    self.z_traversal = nn.ModuleList(z_flow) # nn.ModuleList outputs a list of all the modules in the inputted flow
-    self.relu_weights() # ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
+    def __init__(self, input_size, hidden_layers_dim, num_hidden_layers, output_size):
+        super(ICNN, self).__init__()
+        self.input_size = input_size
+        self.hidden_layers_dim = hidden_layers_dim
+        self.num_hidden_layers = num_hidden_layers
+        self.output_size = output_size
+        self.weight_initialization_description = "Insert description of weight initialization here" # need someone to assist here
+
+        # z_flow is a list of linear layers representing the forward linear flow from y to z1 to z2 to ... zk
+        # nn.Linear applies a linear transformation to incoming data: output = input*weight + bias
+        z_flow = list()
+        z_flow.append(nn.Linear(input_size, hidden_layers_dim))
+        for layer in range(num_hidden_layers - 1):
+            z_flow.append(nn.Linear(hidden_layers_dim, hidden_layers_dim))
+        z_flow.append(nn.Linear(hidden_layers_dim, output_size))
+        self.z_traversal = nn.ModuleList(z_flow) # nn.ModuleList outputs a list of all the modules in the inputted flow
+        self.relu_weights() # ensures that the z-flow weights is non-negative, which is a constraint from Proposition 1 of the ICNN paper
 
 
-    # y_flow is a list of linear layers representing the forward linear connections between y and z2, y and z3, ..., y and zk
-    y_flow = list() 
-    for layer in range(num_hidden_layers - 1):
-      y_flow.append(nn.Linear(input_size, hidden_layers_dim))
-    y_flow.append(nn.Linear(input_size, output_size))
-    self.y_traversal = nn.ModuleList(y_flow)
-    self.activation_function = nn.Softplus() # Softplus is convex and nondecreasing thus satisfies Proposition 1's criteria for network convexity
-    #self.initialize_weights()
+        # y_flow is a list of linear layers representing the forward linear connections between y and z2, y and z3, ..., y and zk
+        y_flow = list() 
+        for layer in range(num_hidden_layers - 1):
+            y_flow.append(nn.Linear(input_size, hidden_layers_dim))
+        y_flow.append(nn.Linear(input_size, output_size))
+        self.y_traversal = nn.ModuleList(y_flow)
+        self.activation_function = nn.Softplus() # Softplus is convex and nondecreasing thus satisfies Proposition 1's criteria for network convexity
+        #self.initialize_weights()
 
-  def forward(self, x):
-    vector = self.activation_function(self.z_traversal[0](x)) # vector holds the activation of each neuron at a given step and serves as the final output vector of the neural network
-    for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
-      vector = self.activation_function(z_flow(vector) + y_flow(x)) 
-    vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
-    return self.activation_function(vector)
+    def forward(self, x):
+        vector = self.activation_function(self.z_traversal[0](x)) # vector holds the activation of each neuron at a given step and serves as the final output vector of the neural network
+        for z_flow, y_flow in zip(self.z_traversal[1:-1], self.y_traversal[:-1]): 
+            vector = self.activation_function(z_flow(vector) + y_flow(x)) 
+        vector = self.z_traversal[-1](vector) + self.y_traversal[-1](x)
+        return self.activation_function(vector)
 
 
-  def relu_weights(self): # New rendention will 'ReLU' the negatives to 0.0001
-    for z_flow in self.z_traversal[1:]:
-      with torch.no_grad():
-        z_flow.weight[z_flow.weight < 0] = 0.000001 # Deep theory to be understood here
+    def relu_weights(self): # New rendention will 'ReLU' the negatives to 0.0001
+        for z_flow in self.z_traversal[1:]:
+            with torch.no_grad():
+                z_flow.weight[z_flow.weight < 0] = 0.000001 # Deep theory to be understood here
 
-  def initialize_weights(self):
-    for y_flow in self.y_traversal:
-      with torch.no_grad():
-        pass# Insert weight initialization method here
+    def initialize_weights(self):
+        for y_flow in self.y_traversal:
+            with torch.no_grad():
+                pass# Insert weight initialization method here
 
 
 
@@ -72,33 +73,46 @@ u_trainset, g_trainset = list(), list()
 
 # The following section generates the data in the form necessary to pass into the training loop
 for _ in range(num_of_batches):
-  u_trainset.append(np.random.rand(batch_size, u_input_size))
-  g_trainset.append(np.random.rand(batch_size, g_input_size)) # u and y must have the same input size!!!!!!!!!!!!!!
+    u_trainset.append(np.random.rand(batch_size, u_input_size))
+    g_trainset.append(np.random.rand(batch_size, g_input_size)) # u and y must have the same input size!!!!!!!!!!!!!!        
 
 mse_loss = nn.MSELoss()
 EPOCHS = 1 # Number of times to loop through the data
 u_optimizer = optim.Adam(u.parameters(), lr=0.0005) # Adam optimizer is the best for our purposes
 g_optimizer = optim.Adam(g.parameters(), lr=0.0005, maximize=True)
+
+
 for epoch in range(EPOCHS):
-  for u_data, g_data in zip(u_trainset, g_trainset):
-    X = (torch.tensor(u_data)).float()
-    u_output = u.forward(X)
-    Y = (torch.tensor(g_data)).float()
-    Y.requires_grad = True
-    g_output = g.forward(Y)
-    placement_loss = mse_loss(g_output, torch.zeros_like(g_output))
-    placement_loss.backward(retain_graph=True)
-    g_optimizer.zero_grad()
-    value = 0
-    for i, g_output_1D in enumerate(g_output):
-      g_i_partials = torch.autograd.grad(g_output_1D[0], Y, retain_graph=True)
-      #print(g_i_partials)
-      value += torch.dot(g_i_partials[0][i], Y[i]) - u.forward(g_i_partials[0][i].resize_(1, Y.size(1)))
-    loss2 = (1 / u_data.shape[0]) * torch.sum(u_output) + (1 / g_data.shape[0]) * value
-    print(loss2)
-    loss2.backward() # May need to zero out some gradients for fun!
-    u_optimizer.step()
-    g_optimizer.step()
-    for uz_flow, gz_flow in zip(u.z_traversal, g.z_traversal):
-      u.relu_weights()
-      g.relu_weights()
+    batch_num = 0
+    batch_graph = []
+    for u_data, g_data in zip(u_trainset, g_trainset):
+        X = (torch.tensor(u_data)).float()
+        u_output = u.forward(X)
+        Y = (torch.tensor(g_data)).float()
+        Y.requires_grad = True
+        g_output = g.forward(Y)
+        placement_loss = mse_loss(g_output, torch.zeros_like(g_output))
+        placement_loss.backward(retain_graph=True)
+        g_optimizer.zero_grad()
+        value = 0
+        for i, g_output_1D in enumerate(g_output):
+            g_i_partials = torch.autograd.grad(g_output_1D[0], Y, retain_graph=True)
+            #print(g_i_partials)
+            value += torch.dot(g_i_partials[0][i], Y[i]) - u.forward(g_i_partials[0][i].resize_(1, Y.size(1)))
+        
+        loss2 = (1 / u_data.shape[0]) * torch.sum(u_output) + (1 / g_data.shape[0]) * value
+        batch_num += 1
+        batch_graph.append([batch_num,loss2])
+        loss2.backward() # May need to zero out some gradients for fun!
+        u_optimizer.step()
+        g_optimizer.step()
+        for uz_flow, gz_flow in zip(u.z_traversal, g.z_traversal):
+            u.relu_weights()
+            g.relu_weights()
+    # plots the loss for each batch and displays
+    plt.figure(figsize = (9, 9))
+    batch_plot_X = [(point[0]) for point in batch_graph]
+    batch_plot_Y = [float((point[1]))for point in batch_graph]
+    plt.plot(batch_plot_X, batch_plot_Y, label = 'Loss over batches')
+    plt.legend()
+    plt.show()
